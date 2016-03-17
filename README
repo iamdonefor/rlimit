@@ -1,0 +1,44 @@
+    Nginx request limit module. 
+ 
+    Creates a pool of ip addresses that request data from web server
+and limits rate of requests. If number of requests exceedes burst
+value in burst time server replies 500 or error_code, if more then total requests
+are received in total time client will receive 500 or error_code until bantime 
+expires. 
+    If request has internal flag "internal" on it will be counted unless 
+internal_off parameter used in pool description.
+    If check_url is set then for each request url also stored and subsequent 
+requests to this url (w/o other requests from an address) are counted w/ increasing
+weight 1,2,4,8 etc.
+    Whitelisted hosts are ignored. Increase log value to increase verbosity.
+
+
+Example config:
+# create pool
+rlimit pool_name pool_size {		
+					# this directive valid in http section. 
+					# pool size should be no less then 1M
+					# each pool monitors it's own statistic
+# rate data				
+	burst 20 3;			# 20 requests in 3 seconds - burst
+	total 200 1m;			# 200 requests in 1 minute - ban
+	
+	ban 10m;			# ban for ten minutes
+	log 3;				# log level: 0: errors, 1: +bans, 2: +bursts, 3: +statistic
+	
+	internal_off;			# whether or not count internal requests as flood
+					# if you choose not to then flood can be missed in some
+					# cases e.g. ssi
+	check_url;			# this should be used in case of slow flood from numerious
+					# ip addresses requesting same uri
+	error_code 404;			# override error_code, default - 500
+	whitelist 1.2.3.4/32 5.6.7.0/24; # these can never be flooders
+    }
+
+ ..
+ location /someloc {
+ 	rlimit_pool pool_name;		# this location is protected
+      ...
+
+Changelog:
+    9. changed lock type according to nginx internal changes
